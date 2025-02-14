@@ -86,7 +86,7 @@ export default function DashboardPage() {
             <div className={`${activeComponent ? "blur-sm" : ""}`}>
                 <Navbar setActiveComponent={setActiveComponent} />
             </div>
-            <main className={`flex h-full bg-grid ${activeComponent ? "blur-sm" : ""}`}>
+            <main className={`flex h-full bg-grid bg-white ${activeComponent ? "blur-sm" : ""}`}>
                 <Sidebar />
                 <div className="px-20 py-10">
                     {loading ? <p>Loading tasks...</p> : <Tasks setActiveComponent={setActiveComponent} tasks={tasks} steps={steps} setEditTask={setEditTask} editTask={editTask} setTaskId={setTaskId} />}

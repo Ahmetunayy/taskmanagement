@@ -5,7 +5,8 @@ export async function createTask(
     companyId: string,
     description: string,
     taskId: string | number, // Accept both string and number
-    steps: { id?: string; title: string }[]
+    existingSteps: { id?: string; title: string ,description: string}[],
+    newStep: { title: string, description: string }[]
 ) {
     try {
         // Ensure taskId is a number if it exists
@@ -31,15 +32,15 @@ export async function createTask(
 
             let stepData = [];
 
-            if (steps.length > 0) {
-                const stepsToUpdate = steps.filter(step => step.id); // Existing steps
-                const newSteps = steps.filter(step => !step.id); // New steps
+            if (existingSteps.length > 0) {
+                const stepsToUpdate = existingSteps
+                const newSteps = newStep
 
                 // Update existing steps
                 for (const step of stepsToUpdate) {
                     const { error: stepError } = await supabase
                         .from("steps")
-                        .update({ title: step.title })
+                        .update({ title: step.title ,description: step.description})
                         .eq("id", Number(step.id)); // Ensure correct type
 
                     if (stepError) {
