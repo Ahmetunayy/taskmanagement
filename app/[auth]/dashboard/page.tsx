@@ -2,115 +2,141 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@/providers/UserProvider";
-import Navbar from "@/components/Navbar";
-import Sidebar from "@/components/Sidebar.tsx/Sidebar";
 import Tasks from "@/components/Tasks";
+import { useSidebar } from "@/providers/SidebarContext";
+import FilterBar, { FilterOptions } from "@/components/FilterBar";
+import { Task } from "@/lib/types";
+import StatisticsPanel from "@/components/StatisticsPanel";
+import TagManager from "@/components/TagManager";
 import { supabase } from "@/lib/supabase";
-import { Task, Step } from "@/lib/types";
-import RightSideBar from '@/components/RightSideBar'
-import { AnimatePresence } from "framer-motion";
-import AddTask from "@/components/AddTask";
 
-// Fetch all tasks for a company
-async function getTasksFromServer(companyId: string | null): Promise<Task[]> {
-    if (!companyId) return [];
+export default function TasksPage() {
+    const { selectedCompany } = useUser();
+    const { tasks, steps, comments, setTaskId, setActiveComponent, refreshData } = useSidebar();
+    const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
 
-    const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("company", companyId);
-
-    if (error) {
-        console.error("Error fetching tasks:", error.message);
-        return [];
-    }
-
-    return data || [];
-}
-
-// Fetch all steps for a list of task IDs
-async function getAllStepsFromServer(taskIds: string[]): Promise<Step[]> {
-    if (taskIds.length === 0) return []; // No tasks exist
-
-    const { data, error } = await supabase
-        .from("steps")
-        .select("*")
-        .in("task_belong_to", taskIds); // Fetch steps for all task IDs
-
-    if (error) {
-        console.error("Error fetching steps:", error.message);
-        return [];
-    }
-
-    return data || [];
-}
-
-export default function DashboardPage() {
-    const { user, selectedCompany } = useUser();
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [steps, setSteps] = useState<Step[]>([]);
-    const [editTask, setEditTask] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [activeComponent, setActiveComponent] = useState<string | null>(null);
-    const [taskId, setTaskId] = useState<string | null>(null);
-
+    // Sayfa yüklendiğinde veya şirket değiştiğinde veriyi yenile
     useEffect(() => {
-        if (!selectedCompany) return;
+        if (selectedCompany) {
+            refreshData();
+        }
+    }, [selectedCompany, refreshData]);
 
-        const fetchTasksAndSteps = async () => {
-            setLoading(true);
+    // Başlangıçta tüm görevleri göster
+    useEffect(() => {
+        setFilteredTasks(tasks);
+    }, [tasks]);
 
-            // Fetch tasks first
-            const taskData = await getTasksFromServer(selectedCompany);
-            setTasks(taskData);
+    // Filtreleme fonksiyonu
+    const handleFilterChange = async (filters: FilterOptions) => {
+        let result = [...tasks];
 
-            // Extract task IDs to fetch steps
-            const taskIds = taskData.map(task => task.id);
+        // Metin araması
+        if (filters.query) {
+            const query = filters.query.toLowerCase();
+            result = result.filter(task =>
+                task.title.toLowerCase().includes(query) ||
+                task.description.toLowerCase().includes(query)
+            );
+        }
 
-            // Fetch all steps related to these tasks
-            const stepsData = await getAllStepsFromServer(taskIds);
-            setSteps(stepsData);
+        // Durum filtresi
+        if (filters.status !== 'all') {
+            result = result.filter(task => task.status === filters.status);
+        }
 
-            setLoading(false);
-        };
+        // Öncelik filtresi
+        if (filters.priority !== 'all') {
+            result = result.filter(task => task.priority === filters.priority);
+        }
 
-        fetchTasksAndSteps();
-    }, [selectedCompany]);
+        // Etiket filtresi - asenkron işlem için özel kod
+        if (filters.tagIds && filters.tagIds.length > 0) {
+            // Tüm görevlerin tag ilişkilerini tek seferde getir
+            const { data: allTaskTags } = await supabase
+                .from('task_tags')
+                .select('task_id, tag_id')
+                .in('task_id', result.map(task => task.id));
 
-    if (!user) {
-        return <p>Loading user data...</p>;
-    }
+            if (allTaskTags) {
+                // task_id -> tag_id[] nesnesine dönüştür
+                const taskTagsMap: Record<string, string[]> = {};
+                allTaskTags.forEach(item => {
+                    if (!taskTagsMap[item.task_id]) {
+                        taskTagsMap[item.task_id] = [];
+                    }
+                    taskTagsMap[item.task_id].push(item.tag_id);
+                });
+
+                // Filtreleme işlemini yap
+                result = result.filter(task => {
+                    const taskTagIds = taskTagsMap[task.id] || [];
+                    return filters.tagIds.some(tagId => taskTagIds.includes(tagId));
+                });
+            } else {
+                // Veri yoksa hiçbir görevi gösterme
+                result = [];
+            }
+        }
+
+        // Sıralama
+        if (filters.sortBy === 'date') {
+            result.sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
+        } else if (filters.sortBy === 'priority') {
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            result.sort((a, b) =>
+                priorityOrder[a.priority as keyof typeof priorityOrder] -
+                priorityOrder[b.priority as keyof typeof priorityOrder]
+            );
+        } else if (filters.sortBy === 'title') {
+            result.sort((a, b) => a.title.localeCompare(b.title));
+        }
+
+        setFilteredTasks(result);
+    };
+
+    // tasks sorgusu için düzeltme
+    const getTasksFromServer = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('company_id', selectedCompany); // 'company' yerine 'company_id'
+
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error("Error fetching tasks:", error);
+            return [];
+        }
+    };
 
     return (
-        <div className={`h-screen w-screen overflow-hidden `}>
-            <div className={`${activeComponent ? "blur-sm" : ""}`}>
-                <Navbar setActiveComponent={setActiveComponent} />
-            </div>
-            <main className={`flex h-full bg-grid bg-white ${activeComponent ? "blur-sm" : ""}`}>
-                <Sidebar />
-                <div className="px-20 py-10">
-                    {loading ? <p>Loading tasks...</p> : <Tasks setActiveComponent={setActiveComponent} tasks={tasks} steps={steps} setEditTask={setEditTask} editTask={editTask} setTaskId={setTaskId} />}
+        <div className="w-full">
+            <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
 
+            {/* İstatistik Panosu */}
+            <StatisticsPanel />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div className="lg:col-span-2">
+                    <FilterBar onFilterChange={handleFilterChange} />
+
+                    <Tasks
+                        tasks={filteredTasks}
+                        steps={steps}
+                        comments={comments}
+                        setActiveComponent={setActiveComponent}
+                        setTaskId={setTaskId}
+                    />
                 </div>
-            </main>
-            <div >
-                <AnimatePresence>
-                    {activeComponent && (
-                        <RightSideBar isOpen={!!activeComponent} onClose={() => setActiveComponent(null)} >
-                            <div className="p-4">
-                                {activeComponent === "addTask" && selectedCompany && taskId !== null && (
-                                    <AddTask companyId={selectedCompany} taskId={taskId} />
-                                )}
-                                {activeComponent === "editTask" && selectedCompany && taskId !== null && (
-                                    <AddTask companyId={selectedCompany} taskId={taskId} />
-                                )}
-                            </div>
 
-                        </RightSideBar>
-                    )}
-                </AnimatePresence>
+                <div className="space-y-6">
+                    <TagManager />
+
+                    {/* Buraya farklı widget'lar eklenebilir */}
+                </div>
             </div>
         </div>
-
     );
 }

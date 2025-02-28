@@ -5,25 +5,20 @@ export async function createTask(
     companyId: string,
     description: string,
     taskId: string | number, // Accept both string and number
-    existingSteps: { id?: string; title: string ,description: string}[],
-    newStep: { title: string, description: string }[]
+    existingSteps: { id?: string; title: string, description: string, is_completed: boolean }[],
+    newSteps: { title: string, description: string, is_completed: boolean }[]
 ) {
     try {
-        // Ensure taskId is a number if it exists
         const taskIdNum = Number(taskId) || null;
 
-        // Update task if taskId exists
+        // Eğer taskId varsa güncelleme yap
         if (taskIdNum) {
-
             const { data: updatedTask, error: taskError } = await supabase
                 .from("tasks")
                 .update({ title, company: companyId, description })
-                .eq("id", taskIdNum) // Ensure correct type
+                .eq("id", taskIdNum)
                 .select()
                 .maybeSingle();
-            // Set headers for single object response
-
-
 
             if (taskError) {
                 console.error("Task update error:", taskError);
@@ -32,43 +27,44 @@ export async function createTask(
 
             let stepData = [];
 
+            // Var olan stepleri güncelle
             if (existingSteps.length > 0) {
-                const stepsToUpdate = existingSteps
-                const newSteps = newStep
-
-                // Update existing steps
-                for (const step of stepsToUpdate) {
+                for (const step of existingSteps) {
                     const { error: stepError } = await supabase
                         .from("steps")
-                        .update({ title: step.title ,description: step.description})
-                        .eq("id", Number(step.id)); // Ensure correct type
+                        .update({
+                            title: step.title,
+                            description: step.description,
+                            is_completed: step.is_completed
+                        })
+                        .eq("id", Number(step.id));
 
                     if (stepError) {
                         console.error("Step update error:", stepError);
                         return { updatedTask, error: stepError };
                     }
                 }
+            }
 
-                // Insert new steps
-                if (newSteps.length > 0) {
-                    const { data, error: newStepError } = await supabase
-                        .from("steps")
-                        .insert(newSteps.map(step => ({ ...step, task_belong_to: taskIdNum })))
-                        .select();
+            // Yeni stepleri ekle
+            if (newSteps.length > 0) {
+                const { data, error: newStepError } = await supabase
+                    .from("steps")
+                    .insert(newSteps.map(step => ({ ...step, task_belong_to: taskIdNum })))
+                    .select();
 
-                    if (newStepError) {
-                        console.error("New step creation error:", newStepError);
-                        return { updatedTask, error: newStepError };
-                    }
-
-                    stepData = data;
+                if (newStepError) {
+                    console.error("New step creation error:", newStepError);
+                    return { updatedTask, error: newStepError };
                 }
+
+                stepData = data;
             }
 
             return { updatedTask, stepData };
         }
 
-        // If no taskId, create a new task (fallback)
+        // Eğer yeni bir task oluşturuluyorsa
         const { data: newTask, error: newTaskError } = await supabase
             .from("tasks")
             .insert([{ title, company: companyId, description }])
@@ -78,6 +74,21 @@ export async function createTask(
         if (newTaskError) {
             console.error("Task creation error:", newTaskError);
             return { error: newTaskError };
+        }
+
+        // Yeni task ID'si ile stepleri ekle
+        if (newSteps.length > 0 && newTask?.id) {
+            const { data: stepData, error: newStepError } = await supabase
+                .from("steps")
+                .insert(newSteps.map(step => ({ ...step, task_belong_to: newTask.id })))
+                .select();
+
+            if (newStepError) {
+                console.error("New step creation error:", newStepError);
+                return { newTask, error: newStepError };
+            }
+
+            return { newTask, stepData };
         }
 
         return { newTask };

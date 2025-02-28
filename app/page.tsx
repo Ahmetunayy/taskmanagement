@@ -1,6 +1,6 @@
 
 import Navbar from "@/components/Navbar";
-import Sidebar from "@/components/Sidebar.tsx/Sidebar";
+import Sidebar from "@/components/Sidebar/Sidebar";
 import { createClient } from "@/lib/server";
 import { redirect } from "next/navigation";
 export default async function Home() {
@@ -21,7 +21,7 @@ export default async function Home() {
   return (
     <div className="h-screen w-screen overflow-hidden">
       <Navbar />
-      <main className="flex h-full">
+      <main className="flex h-[94vh">
         <Sidebar />
       </main>
     </div>

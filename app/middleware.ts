@@ -42,9 +42,33 @@ export async function middleware(request: NextRequest) {
 
     const { data: { session } } = await supabase.auth.getSession()
 
-    if (request.nextUrl.pathname.includes('/dashboard')) {
+    // Temel oturum kontrolü
+    if (request.nextUrl.pathname.includes('/dashboard') ||
+        request.nextUrl.pathname.includes('/company') ||
+        request.nextUrl.pathname.includes('/progress')) {
         if (!session) {
             return NextResponse.redirect(new URL('/login', request.url))
+        }
+    }
+
+    // Şirket yönetimi için rol kontrolü
+    if (request.nextUrl.pathname.includes('/company')) {
+        console.log('Session User ID:', session?.user?.id);
+
+        // Kullanıcının şirket yönetimi izinlerini kontrol et
+        const { data: userCompanyRoles, error: roleError } = await supabase
+            .from('company_employees')
+            .select('role')
+            .eq('user_id', session?.user?.id)  // Burayı auth_id'den user_id'ye değiştirdik
+            .single();
+
+        console.log('Şirket rolü:', userCompanyRoles?.role, 'Hata:', roleError);
+
+        // Geçici olarak middleware kontrolünü atla - TESTİNİZ BİTİNCE KALDIRIN
+        if (process.env.NODE_ENV === 'development') {
+            console.log('Geliştirme modunda bypass ediliyor');
+        } else if (!userCompanyRoles || (userCompanyRoles.role !== 'admin' && userCompanyRoles.role !== 'editor')) {
+            return NextResponse.redirect(new URL('/unauthorized', request.url))
         }
     }
 
@@ -63,6 +87,9 @@ export const config = {
         '/dashboard/:path*',
         '/login',
         '/:auth/dashboard',  // [auth] parametreli rota için
-        '/unauthorized'
+        '/:auth/progress',
+        '/:auth/company/:path*',
+        '/unauthorized',
+        '/createcompany'  // Yeni eklenen sayfa
     ]
 };

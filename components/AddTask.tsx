@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { createTask } from "@/app/api/task/createTask";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+
 import SvgAddButton from "./SvgAddButton";
+import { useSidebar } from "@/providers/SidebarContext";
 
 export default function AddTask({ companyId, taskId }: { companyId: string; taskId?: string }) {
   const [loading, setLoading] = useState(false);
@@ -17,9 +18,10 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
     title: string;
     description: string;
     showDescription: boolean; // ✅ Ensure every step has this property
+    is_completed: boolean;
   }[]>([]);
 
-  const router = useRouter();
+  const { refreshData } = useSidebar();
 
   // Task düzenleme ekranındaysak mevcut task ve step bilgilerini çek
   useEffect(() => {
@@ -76,23 +78,24 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
     setError(null);
 
     const existingSteps = steps
-    .filter((step) => step.id) // Only steps with an ID (already exist in DB)
-    .map(({ id, title, description }) => ({
-      id,
-      title,
-      description,
-    }));
+      .filter((step) => step.id) // Only steps with an ID (already exist in DB)
+      .map(({ id, title, description, is_completed }) => ({
+        id,
+        title,
+        description,
+        is_completed,
+      }));
 
-  const newSteps = steps
-    .filter((step) => !step.id) // Steps without an ID (new ones)
-    .map(({ title, description }) => ({
-      title,
-      description,
-    }));
+    const newSteps = steps
+      .filter((step) => !step.id) // Steps without an ID (new ones)
+      .map(({ title, description, is_completed }) => ({
+        title,
+        description,
+        is_completed,
+      }));
 
-  // Send filtered steps to your API
-  const { error } = await createTask(title, companyId, description, taskId || "", existingSteps, newSteps);
-
+    // Send filtered steps to your API
+    const { error } = await createTask(title, companyId, description, taskId || "", existingSteps, newSteps);
 
     if (error) {
       setError(error.message);
@@ -100,12 +103,17 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
       return;
     }
 
-    // İşlem başarılı olduysa state’i sıfırla ve sayfayı yenile
+    // İşlem başarılı olduysa state'i sıfırla ve veriyi yenile
     setLoading(false);
     setTitle("");
     setDescription("");
     setSteps([]);
-    router.refresh();
+
+    // Sayfa yenileme yerine, veriyi context aracılığıyla yenileyeceğiz
+    await refreshData();
+
+    // Modal'ı kapat (opsiyonel)
+    // onClose && onClose();
   };
 
   // Bir step'in hem başlığını hem açıklamasını güncelleyen fonksiyon
@@ -126,7 +134,8 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
       {
         title: "",
         description: "",
-        showDescription: false, // ✅ Ensure each new step has showDescription
+        showDescription: false, //
+        is_completed: false,
       },
     ]);
   };
@@ -139,6 +148,14 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
         i === index
           ? { ...step, showDescription: !step.showDescription } // ✅ Fix the logic
           : step
+      )
+    );
+  };
+
+  const handleStepCompletion = (index: number, is_completed: boolean) => {
+    setSteps((prevSteps) =>
+      prevSteps.map((step, i) =>
+        i === index ? { ...step, is_completed } : step
       )
     );
   };
@@ -162,7 +179,7 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
         <input
           type="text"
           placeholder="Description"
-          value={description}
+          value={description ?? ""}
           onChange={(e) => setDescription(e.target.value)}
           required
           className="px-4 py-2 border rounded-md"
@@ -173,9 +190,14 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
           {steps.map((step, index) => (
             <div key={index} className="flex items-center gap-2">
               <input
+                type="checkbox"
+                checked={step.is_completed}
+                onChange={(e) => handleStepCompletion(index, e.target.checked)}
+              />
+              <input
                 type="text"
                 placeholder={`Step ${index + 1}`}
-                value={step.title}
+                value={step.title ?? ""}
                 onChange={(e) =>
                   handleStepChange(index, e.target.value, step.description)
                 }
@@ -195,7 +217,7 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
                 <input
                   type="text"
                   placeholder="Step Description"
-                  value={step.description}
+                  value={step.description ?? ""}
                   onChange={(e) =>
                     handleStepChange(index, step.title, e.target.value)
                   }

@@ -1,12 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase"; // ✅ Use the Client Supabase instance
-import { getCompany, setCompany } from "@/app/api/company/companyStorage"; // ✅ LocalStorage support
+import { getCompany } from "@/app/api/company/companyStorage"; // ✅ LocalStorage support
+import { PermissionProvider } from "@/providers/PermissionProvider";
 
 interface User {
     firstname: string;
     lastname: string;
+    id: string;
+    email: string;
 }
 
 interface Company {
@@ -18,13 +22,10 @@ interface Company {
 interface UserContextType {
     user: User | null;
     companies: Company[];
-
     selectedCompany: string | null;
     setSelectedCompany: (companyId: string) => void;
+    setCompanies: (companies: Company[]) => void;
 }
-
-
-
 
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -33,53 +34,97 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [companies, setCompanies] = useState<Company[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<string | null>(getCompany()); // ✅ Get from localStorage
+    const [session, setSession] = useState<any>(null);
 
 
     useEffect(() => {
         const fetchUserData = async () => {
-            const { data: authData, error: authError } = await supabase.auth.getUser();
-            if (authError || !authData.user) {
-                console.error("User authentication failed:", authError);
+            if (!session?.user) {
+                setUser(null);
                 return;
             }
 
-            const authId = authData.user.id;
+            try {
+                // Auth bilgilerini kullanarak public.users tablosundan veri çekme
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
 
-            // Fetch user info
-            const { data: userData } = await supabase
-                .from("users")
-                .select("firstname, lastname")
-                .eq("auth_id", authId)
-                .single();
-            if (userData) setUser(userData);
+                if (error) {
+                    console.error("Kullanıcı verisi alınırken hata oluştu:", error);
 
-            // Fetch companies
-            const { data: companyData } = await supabase
-                .from("companies")
-                .select("id, name")
-                .eq("owner", authId);
-            if (companyData) {
-                setCompanies(companyData || []);
+                    // Kullanıcı kaydı yoksa oluşturalım
+                    if (error.code === 'PGRST116') {
+                        console.log("Kullanıcı kaydı bulunamadı, yeni kayıt oluşturuluyor");
 
-                // ✅ If no company selected, use the first one
-                if (!selectedCompany) {
-                    const defaultCompany = companyData?.[0]?.id || null;
-                    setSelectedCompany(defaultCompany);
-                    setCompany(defaultCompany); // ✅ Save to localStorage
+                        // Yeni kullanıcı kaydı oluştur
+                        const { error: insertError } = await supabase
+                            .from('users')
+                            .insert({
+                                id: session.user.id,
+                                email: session.user.email,
+                                firstname: '',
+                                lastname: ''
+                            });
+
+                        if (insertError) {
+                            console.error("Kullanıcı kaydı oluşturulamadı:", insertError);
+                            setUser(session.user); // En azından auth verisini kullan
+                        } else {
+                            // Yeni kullanıcı verilerini getir
+                            const { data: newData } = await supabase
+                                .from('users')
+                                .select('*')
+                                .eq('id', session.user.id)
+                                .single();
+
+                            setUser(newData || session.user);
+                        }
+                    } else {
+                        setUser(session.user); // Hata durumunda auth verisini kullan
+                    }
+                } else {
+                    setUser(data); // Kullanıcı verisi varsa kullan
                 }
+            } catch (err) {
+                console.error("Kullanıcı verisi işlenirken hata:", err);
+                setUser(session.user); // Hata durumunda auth verisini kullan
             }
-
-            // Fetch steps
-
         };
 
         fetchUserData();
 
-    }, []); // ✅ Remove `selectedCompany` from dependencies to prevent infinite loops
+    }, [session]);
+
+    useEffect(() => {
+        // Get initial session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+        });
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            (_event, session) => {
+                setSession(session);
+            }
+        );
+
+        return () => subscription.unsubscribe();
+    }, []);
 
     return (
-        <UserContext.Provider value={{ user, companies, selectedCompany, setSelectedCompany }}>
-            {children}
+        <UserContext.Provider value={{
+            user,
+            companies,
+            selectedCompany,
+            setSelectedCompany,
+            setCompanies
+        }}>
+            <PermissionProvider>
+                {children}
+            </PermissionProvider>
         </UserContext.Provider>
     );
 
