@@ -7,7 +7,7 @@ interface GetTasksProps {
 
 export async function getComments({ companyId }: GetTasksProps) {
     const supabase = await createClient();
-    const { data, error } = await supabase.from("tasks").select("*").eq("company", companyId);
+    const { data, error } = await supabase.from("tasks").select("*").eq("company_id", companyId);
     if (error) {
 
         throw new Error(error.message);

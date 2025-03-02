@@ -39,7 +39,7 @@ export default function ProgressPage() {
 
         // Sıralama
         if (filters.sortBy === 'date') {
-            result.sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
+            result.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
         } else if (filters.sortBy === 'priority') {
             const priorityOrder = { high: 0, medium: 1, low: 2 };
             result.sort((a, b) => priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder]);

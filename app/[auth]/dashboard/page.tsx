@@ -81,7 +81,7 @@ export default function TasksPage() {
 
         // Sıralama
         if (filters.sortBy === 'date') {
-            result.sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
+            result.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
         } else if (filters.sortBy === 'priority') {
             const priorityOrder = { high: 0, medium: 1, low: 2 };
             result.sort((a, b) =>
@@ -101,7 +101,7 @@ export default function TasksPage() {
             const { data, error } = await supabase
                 .from('tasks')
                 .select('*')
-                .eq('company_id', selectedCompany); // 'company' yerine 'company_id'
+                .eq('company_id', selectedCompany);
 
             if (error) throw error;
             return data || [];

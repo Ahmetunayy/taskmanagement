@@ -26,10 +26,10 @@ function Tasks({ tasks, steps, setActiveComponent, setTaskId }: TasksProps & { s
                             className={`overflow-hidden transition-[max-height] duration-500 ease-in-out ${extendedTask === task.id ? "max-h-96" : "max-h-16"
                                 }`}
                         >
-                            {steps.filter((step) => step.task_belong_to === task.id).length > 0 ? (
+                            {steps.filter((step) => step.task_id === task.id).length > 0 ? (
                                 <ul className="list-disc ml-5">
                                     {steps
-                                        .filter((step) => step.task_belong_to === task.id)
+                                        .filter((step) => step.task_id === task.id)
                                         .map((step) => (
                                             <li
                                                 key={step.id}
@@ -70,11 +70,11 @@ function Tasks({ tasks, steps, setActiveComponent, setTaskId }: TasksProps & { s
                                     d="M0.17 0a0.021 0.021 0 0 1 0.021 0.021v0.039h0.226v-0.039a0.021 0.021 0 0 1 0.042 0v0.039H0.54a0.06 0.06 0 0 1 0.06 0.06v0.42A0.06 0.06 0 0 1 0.54 0.6H0.06a0.06 0.06 0 0 1 -0.06 -0.06V0.12a0.06 0.06 0 0 1 0.06 -0.06h0.089V0.021a0.021 0.021 0 0 1 0.021 -0.021M0.042 0.232v0.308a0.018 0.018 0 0 0 0.018 0.018h0.48a0.018 0.018 0 0 0 0.018 -0.018V0.233zm0.158 0.206v0.05H0.15v-0.05zm0.125 0v0.05H0.275v-0.05zm0.125 0v0.05h-0.05v-0.05zm-0.25 -0.119v0.05H0.15v-0.05zm0.125 0v0.05H0.275v-0.05zm0.125 0v0.05h-0.05v-0.05zM0.149 0.102H0.06a0.018 0.018 0 0 0 -0.018 0.018v0.07l0.516 0V0.12a0.018 0.018 0 0 0 -0.018 -0.018h-0.081v0.028a0.021 0.021 0 0 1 -0.042 0v-0.028H0.191v0.028a0.021 0.021 0 0 1 -0.042 0z"
                                 />
                             </svg>
-                            {new Intl.DateTimeFormat("tr-TR", {
+                            {task.due_date ? new Intl.DateTimeFormat("tr-TR", {
                                 day: "2-digit",
                                 month: "2-digit",
                                 year: "numeric",
-                            }).format(new Date(task.end_date))}
+                            }).format(new Date(task.due_date)) : "No due date"}
                         </div>
 
                         <div className="absolute top-2 right-2">

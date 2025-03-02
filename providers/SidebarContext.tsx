@@ -37,7 +37,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
         const { data: tasksData } = await supabase
             .from("tasks")
             .select("*")
-            .eq("company", selectedCompany);
+            .eq("company_id", selectedCompany);
 
         if (tasksData) {
             setTasks(tasksData);
@@ -50,7 +50,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
                 const { data: stepsData } = await supabase
                     .from("steps")
                     .select("*")
-                    .in("task_belong_to", taskIds);
+                    .in("task_id", taskIds);
 
                 if (stepsData) setSteps(stepsData);
             }
@@ -59,7 +59,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
             const { data: commentsData } = await supabase
                 .from("comments")
                 .select("*")
-                .eq("company", selectedCompany);
+                .eq("company_id", selectedCompany);
 
             if (commentsData) setComments(commentsData);
         }

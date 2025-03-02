@@ -52,7 +52,7 @@ export default function KanbanPage() {
 
         // Sıralama
         if (filters.sortBy === 'date') {
-            result.sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
+            result.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
         } else if (filters.sortBy === 'priority') {
             const priorityOrder = { high: 0, medium: 1, low: 2 };
             result.sort((a, b) => priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder]);
@@ -206,13 +206,13 @@ export default function KanbanPage() {
                                                                 </p>
                                                                 <div className="flex justify-between items-center mt-2">
                                                                     <span className="text-xs text-gray-500">
-                                                                        {new Date(task.end_date).toLocaleDateString()}
+                                                                        {new Date(task.due_date).toLocaleDateString()}
                                                                     </span>
                                                                     <div className="flex items-center">
                                                                         {/* Task step count */}
-                                                                        {steps.filter(step => step.task_belong_to === task.id).length > 0 && (
+                                                                        {steps.filter(step => step.task_id === task.id).length > 0 && (
                                                                             <span className="text-xs bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 mr-1">
-                                                                                {steps.filter(step => step.task_belong_to === task.id).length} adım
+                                                                                {steps.filter(step => step.task_id === task.id).length} adım
                                                                             </span>
                                                                         )}
                                                                     </div>

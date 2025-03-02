@@ -50,7 +50,7 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
       const { data: stepsData, error: stepsError } = await supabase
         .from("steps")
         .select("*")
-        .eq("task_belong_to", taskId);
+        .eq("task_id", taskId);
 
       if (stepsError) {
         setError("Failed to load steps.");

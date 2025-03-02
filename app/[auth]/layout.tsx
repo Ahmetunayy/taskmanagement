@@ -68,7 +68,6 @@ async function getCommentsFromServer(companyId: string | null): Promise<Comment[
             .from('comments')
             .select('*')
             .eq('company_id', companyId);
-
         if (error) throw error;
         return data || [];
     } catch (error) {

@@ -62,13 +62,13 @@ export default function TaskCard({ task, steps, onClick }: TaskCardProps) {
     }, [task.id]);
 
     // Görev bitiş tarihine kalan süreyi hesapla
-    const timeLeft = formatDistanceToNow(new Date(task.end_date), {
+    const timeLeft = formatDistanceToNow(new Date(task.due_date), {
         addSuffix: true,
         locale: tr
     });
 
     // Görevin tamamlanma yüzdesini hesapla
-    const taskSteps = steps.filter(step => step.task_belong_to === task.id);
+    const taskSteps = steps.filter(step => step.task_id === task.id);
     const completedSteps = taskSteps.filter(step => step.is_completed);
     const progress = taskSteps.length > 0
         ? Math.round((completedSteps.length / taskSteps.length) * 100)

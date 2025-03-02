@@ -4,7 +4,8 @@ export interface Task {
     progress: number;
     description: string;
     priority: string;
-    end_date: string;
+    due_date: string;
+    company_id: string;
     status: 'not_started' | 'in_progress' | 'completed';
 }
 
@@ -59,7 +60,7 @@ export interface Step {
     title: string;
     description: string;
     is_completed: boolean;
-    task_belong_to: string;
+    task_id: string;
 }
 export interface Comment {
     id: string;

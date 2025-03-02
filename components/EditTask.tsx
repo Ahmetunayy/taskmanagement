@@ -8,7 +8,7 @@ import { Tag, User } from '@/lib/types';
 import { useUser } from "@/providers/UserProvider";
 import { useSidebar } from "@/providers/SidebarContext";
 
-export default function AddTask({ companyId, taskId }: { companyId: string; taskId?: string }) {
+export default function EditTask({ companyId, taskId }: { companyId: string; taskId?: string }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [title, setTitle] = useState("");
@@ -59,7 +59,7 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
             const { data: stepsData, error: stepsError } = await supabase
                 .from("steps")
                 .select("*")
-                .eq("task_belong_to", taskId);
+                .eq("task_id", taskId);
 
             if (stepsError) {
                 setError("Failed to load steps.");
@@ -240,7 +240,6 @@ export default function AddTask({ companyId, taskId }: { companyId: string; task
 
     // İlgili index'teki step'in description alanını açma-kapama
     const toggleDescription = (index: number) => {
-        console.log("Toggling step index:", index);
         setSteps((prevSteps) =>
             prevSteps.map((step, i) =>
                 i === index

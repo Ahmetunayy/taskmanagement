@@ -19,7 +19,7 @@ export default function StatisticsPanel() {
             const { data: tasks } = await supabase
                 .from('tasks')
                 .select('*')
-                .eq('company', selectedCompany);
+                .eq('company_id', selectedCompany);
 
             if (!tasks) {
                 setIsLoading(false);

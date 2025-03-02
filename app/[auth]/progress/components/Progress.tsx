@@ -52,7 +52,7 @@ export default function Progress({ tasks, steps }: { tasks: Task[], steps: Step[
 
                                     </div>
                                 </td>
-                                <td className="p-2 border-r  border-gray-300 flex justify-center items-center w-[200px]">{task.end_date.split('T')[0]}</td>
+                                <td className="p-2 border-r  border-gray-300 flex justify-center items-center w-[200px]">{task.due_date}</td>
                                 <td className="p-2 border-r border-gray-300 ">
                                     <div className='flex justify-center items-center'>
                                         <div
@@ -74,7 +74,7 @@ export default function Progress({ tasks, steps }: { tasks: Task[], steps: Step[
                                     <tr className=''>
                                         <td colSpan={2} className="p-2">
                                             {steps
-                                                .filter((step) => step.task_belong_to === task.id)
+                                                .filter((step) => step.task_id === task.id)
                                                 .map((step) => (
                                                     <div key={step.id} className="p-2">
                                                         <p>{step.title}</p>
